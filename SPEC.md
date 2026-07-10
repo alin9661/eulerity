@@ -81,7 +81,9 @@ Window must be 7–30 days inclusive. Top-level shape: `{ network, period, previ
 
 ## 4. Verified API gotchas (probed live, 2026-07-10)
 
-1. **Synthetic data regenerates on every request** (sine-wave trend ± 15% noise, no database). Two identical queries return different numbers → KPIs, chart, and CSV export **must be derived from one fetched snapshot**; cache per `(network, startDate, endDate)` for UI coherence, not just performance.
+1. **Synthetic data is generated on the fly but DETERMINISTIC** (verified 2026-07-10: repeated fetches of the same URL are byte-identical on both endpoints). The challenge page's "generated on every request" means computed per request from a seeded function (sine-wave trend ± 15% daily noise), not random per request. Same URL + params = same data → responses are safely cacheable per `(network, startDate, endDate)`.
+1b. **Daily values are seeded by the WINDOW, not the date** (verified): the same date returns different values when requested inside different windows (e.g. 2026-07-01 google impressions = 33,694 in a 06-26→07-09 window but 35,100 in a 07-01→07-09 window). Overlapping ranges disagree — worth documenting, and a strong "question to ask Eulerity" candidate.
+1c. **`previousTotals` exactly equals a direct fetch of the previous window** (verified across all 3 networks × 7/14/30d windows): a previous-period daily overlay built from one extra request is provably consistent with the backend's own comparison math. Cross-day determinism unverified — re-check morning of submission.
 2. **Future dates are accepted** — `endDate=2026-07-20` happily returns synthetic future data. The frontend must clamp the picker to today (and say so in the README).
 3. **Meta has no combined rollup** — client must either present Facebook/Instagram separately or compute a combined view (summing bases, recomputing rates).
 4. **CORS is fully open** (`access-control-allow-origin: *`) — call the API directly, no proxy.
@@ -102,9 +104,10 @@ Window must be 7–30 days inclusive. Top-level shape: `{ network, period, previ
 Ranked candidates for "the intentionally underspecified requirement," each with the question to ask and a proposed resolution to document in the README:
 
 1. **Delta favorability for spend** (req #4 says show favorable/unfavorable on *each* metric). CTR/conversions up = favorable; CPC/CPM/cost-per-conversion down = favorable. But **spend has no intrinsic direction** — spend up with conversions up is scale, spend up with conversions flat is waste. *Proposed resolution:* treat spend as **neutral** (delta shown, colored neutrally), and document the per-metric directionality map. This is the strongest candidate — it's inside a mandatory requirement and has no correct default.
-2. **CSV export scope** (req #5: "the relevant data … current view … useful on its own"). Daily rows or totals? Include `previousPeriod`? Dashboard too, or detail pages only? *Proposed resolution:* export the current view's daily rows for the selected range with context columns (network, platform, period bounds), plus a totals/comparison block; export available on every page that shows data.
+2. **CSV export scope** (req #5: "the relevant data … current view … useful on its own"). Daily rows or totals? Include `previousPeriod`? Dashboard too, or detail pages only? *Proposed resolution:* one uniform daily-grain contract on every page that shows data — the current view's daily rows with context columns (network, platform, periodStart, periodEnd); no mixed-grain totals rows (totals are recomputable via SUM).
 3. **Meta presentation**: combined rollup vs side-by-side (API provides no combined totals). *Proposed resolution:* show both — combined KPIs computed correctly (summed bases → recomputed rates) with a platform toggle/split for detail.
 4. **Future dates**: API accepts them; should the picker? *Proposed resolution:* clamp to today.
+5. **Window-seeded daily values**: the same calendar date returns different numbers depending on the requested window (see §4.1b). *Question:* is this intentional? *Proposed resolution:* treat each (network, window) response as its own consistent dataset; never mix daily rows across windows.
 
 ## 7. Judgment guidance (verbatim cues from the page)
 
