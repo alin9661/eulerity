@@ -2,7 +2,7 @@
 
 A multi-channel marketing dashboard for Facebook, Google, Instagram, and LinkedIn ad performance: one overview page, three network detail pages, period-over-period deltas, and CSV export, built on the Eulerity Web Challenge 2026 API.
 
-**Live demo:** _Vercel link_
+**Live demo:** https://eulerity-metrics.vercel.app
 
 <!-- screenshots: dashboard overview, network detail with ghost overlay, CSV output in Excel -->
 
